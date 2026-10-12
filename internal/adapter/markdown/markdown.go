@@ -2,6 +2,7 @@ package markdown
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -102,6 +103,11 @@ func (p *Parser) ParseNoteContent(content string) (*core.NoteContent, error) {
 		return nil, err
 	}
 
+	headings, err := parseHeadings(root, bytes)
+	if err != nil {
+		return nil, err
+	}
+
 	return &core.NoteContent{
 		Title:    title,
 		Body:     body,
@@ -109,7 +115,40 @@ func (p *Parser) ParseNoteContent(content string) (*core.NoteContent, error) {
 		Links:    links,
 		Tags:     tags,
 		Metadata: frontmatter.values,
+		Headings: headings,
 	}, nil
+}
+
+// parseHeadings extracts all the headings of the note, in document order.
+func parseHeadings(root ast.Node, source []byte) ([]core.Heading, error) {
+	headings := []core.Heading{}
+
+	err := ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		heading, ok := n.(*ast.Heading)
+		if !ok || !entering {
+			return ast.WalkContinue, nil
+		}
+
+		text := strings.TrimSpace(string(heading.Text(source)))
+		if text == "" {
+			return ast.WalkContinue, nil
+		}
+
+		line := 1
+		if lines := heading.Lines(); lines.Len() > 0 {
+			line = bytes.Count(source[:lines.At(0).Start], []byte("\n")) + 1
+		}
+
+		headings = append(headings, core.Heading{
+			Level: heading.Level,
+			Text:  text,
+			Line:  line,
+		})
+
+		return ast.WalkContinue, nil
+	})
+
+	return headings, err
 }
 
 // parseTitle extracts the note title with its node.

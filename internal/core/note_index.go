@@ -22,6 +22,10 @@ type NoteIndex interface {
 	// FindLinksBetweenNotes retrieves the links between the given notes.
 	FindLinksBetweenNotes(ids []NoteID) ([]ResolvedLink, error)
 
+	// FindHeadingsOfNotes retrieves the headings of the given notes, indexed
+	// by note ID.
+	FindHeadingsOfNotes(ids []NoteID) (map[NoteID][]Heading, error)
+
 	// FindCollections retrieves all the collections of the given kind.
 	FindCollections(kind CollectionKind, sorters []CollectionSorter) ([]Collection, error)
 

@@ -224,6 +224,22 @@ func (db *DB) migrate() error {
 				},
 				NeedsReindexing: true,
 			},
+
+			{ // 9
+				SQL: []string{
+					// Headings
+					`CREATE TABLE IF NOT EXISTS headings (
+						id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+						note_id INTEGER NOT NULL REFERENCES notes(id)
+							ON DELETE CASCADE,
+						level INTEGER NOT NULL,
+						title TEXT NOT NULL,
+						line INTEGER NOT NULL
+					)`,
+					`CREATE INDEX IF NOT EXISTS index_headings_note_id ON headings (note_id, line)`,
+				},
+				NeedsReindexing: true,
+			},
 		}
 
 		needsReindexing := false

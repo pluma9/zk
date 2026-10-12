@@ -26,6 +26,7 @@ type NoteIndex struct {
 type dao struct {
 	notes       *NoteDAO
 	links       *LinkDAO
+	headings    *HeadingDAO
 	collections *CollectionDAO
 	metadata    *MetadataDAO
 }
@@ -43,6 +44,15 @@ func NewNoteIndex(notebookPath string, db *DB, logger util.Logger, extension str
 func (ni *NoteIndex) Find(opts core.NoteFindOpts) (notes []core.ContextualNote, err error) {
 	err = ni.commit(func(dao *dao) error {
 		notes, err = dao.notes.Find(opts)
+		return err
+	})
+	return
+}
+
+// FindHeadingsOfNotes implements core.NoteIndex.
+func (ni *NoteIndex) FindHeadingsOfNotes(ids []core.NoteID) (headings map[core.NoteID][]core.Heading, err error) {
+	err = ni.commit(func(dao *dao) error {
+		headings, err = dao.headings.FindByNoteIDs(ids)
 		return err
 	})
 	return
@@ -116,6 +126,11 @@ func (ni *NoteIndex) Add(note core.Note, fixLinks bool) (id core.NoteID, err err
 		note.ID = id
 
 		err = ni.addLinks(dao, id, note.Links)
+		if err != nil {
+			return err
+		}
+
+		err = dao.headings.Add(id, note.Headings)
 		if err != nil {
 			return err
 		}
@@ -275,6 +290,16 @@ func (ni *NoteIndex) Update(note core.Note) error {
 			return err
 		}
 
+		// Reset headings
+		err = dao.headings.RemoveAll(id)
+		if err != nil {
+			return err
+		}
+		err = dao.headings.Add(id, note.Headings)
+		if err != nil {
+			return err
+		}
+
 		// Reset tags
 		err = dao.collections.RemoveAssociations(id)
 		if err != nil {
@@ -388,6 +413,7 @@ func (ni *NoteIndex) commit(transaction func(dao *dao) error) error {
 			dao := dao{
 				notes:       NewNoteDAO(tx, ni.logger, ni.extension),
 				links:       NewLinkDAO(tx, ni.logger),
+				headings:    NewHeadingDAO(tx, ni.logger),
 				collections: NewCollectionDAO(tx, ni.logger),
 				metadata:    NewMetadataDAO(tx),
 			}

@@ -46,9 +46,29 @@ func executeCommandList(logger util.Logger, notebook *core.Notebook, args []any)
 		return nil, err
 	}
 
+	headings := map[core.NoteID][]core.Heading{}
+	if selection.Headings {
+		ids := make([]core.NoteID, 0, len(notes))
+		for _, note := range notes {
+			ids = append(ids, note.ID)
+		}
+		headings, err = notebook.FindHeadingsOfNotes(ids)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	listNotes := []listNote{}
 	for _, note := range notes {
-		listNotes = append(listNotes, newListNote(note, selection, notebook.Path))
+		listNote := newListNote(note, selection, notebook.Path)
+		if selection.Headings {
+			noteHeadings := headings[note.ID]
+			if noteHeadings == nil {
+				noteHeadings = []core.Heading{}
+			}
+			listNote.Headings = &noteHeadings
+		}
+		listNotes = append(listNotes, listNote)
 	}
 
 	return listNotes, nil
@@ -64,6 +84,7 @@ type listSelection struct {
 	Body         bool
 	Snippets     bool
 	RawContent   bool
+	Headings     bool
 	WordCount    bool
 	Tags         bool
 	Metadata     bool
@@ -83,6 +104,7 @@ func newListSelection(fields []string) listSelection {
 		Body:         strutil.Contains(fields, "body"),
 		Snippets:     strutil.Contains(fields, "snippets"),
 		RawContent:   strutil.Contains(fields, "rawContent"),
+		Headings:     strutil.Contains(fields, "headings"),
 		WordCount:    strutil.Contains(fields, "wordCount"),
 		Tags:         strutil.Contains(fields, "tags"),
 		Metadata:     strutil.Contains(fields, "metadata"),
@@ -143,19 +165,20 @@ func newListNote(note core.ContextualNote, selection listSelection, basePath str
 }
 
 type listNote struct {
-	Filename     string         `json:"filename,omitempty"`
-	FilenameStem string         `json:"filenameStem,omitempty"`
-	Path         string         `json:"path,omitempty"`
-	AbsPath      string         `json:"absPath,omitempty"`
-	Title        string         `json:"title,omitempty"`
-	Lead         string         `json:"lead,omitempty"`
-	Body         string         `json:"body,omitempty"`
-	Snippets     []string       `json:"snippets,omitempty"`
-	RawContent   string         `json:"rawContent,omitempty"`
-	WordCount    int            `json:"wordCount,omitempty"`
-	Tags         []string       `json:"tags,omitempty"`
-	Metadata     map[string]any `json:"metadata,omitempty"`
-	Created      *time.Time     `json:"created,omitempty"`
-	Modified     *time.Time     `json:"modified,omitempty"`
-	Checksum     string         `json:"checksum,omitempty"`
+	Filename     string          `json:"filename,omitempty"`
+	FilenameStem string          `json:"filenameStem,omitempty"`
+	Path         string          `json:"path,omitempty"`
+	AbsPath      string          `json:"absPath,omitempty"`
+	Title        string          `json:"title,omitempty"`
+	Lead         string          `json:"lead,omitempty"`
+	Body         string          `json:"body,omitempty"`
+	Snippets     []string        `json:"snippets,omitempty"`
+	RawContent   string          `json:"rawContent,omitempty"`
+	Headings     *[]core.Heading `json:"headings,omitempty"`
+	WordCount    int             `json:"wordCount,omitempty"`
+	Tags         []string        `json:"tags,omitempty"`
+	Metadata     map[string]any  `json:"metadata,omitempty"`
+	Created      *time.Time      `json:"created,omitempty"`
+	Modified     *time.Time      `json:"modified,omitempty"`
+	Checksum     string          `json:"checksum,omitempty"`
 }

@@ -230,3 +230,58 @@ func assertTagExistsOrNot(t *testing.T, db *DB, shouldExist bool, tag string) {
 func assertTaggedOrNot(t *testing.T, db *DB, shouldBeTagged bool, noteID core.NoteID, tag string) {
 	assertExistOrNot(t, db, shouldBeTagged, "SELECT id FROM notes_collections WHERE note_id = ? AND collection_id IS (SELECT id FROM collections WHERE kind = 'tag' AND name = ?)", noteID, tag)
 }
+
+func TestNoteIndexAddWithHeadings(t *testing.T) {
+	db, index := testNoteIndex(t)
+
+	id, err := index.Add(core.Note{
+		Path: "log/added.md",
+		Headings: []core.Heading{
+			{Level: 1, Text: "Title", Line: 1},
+			{Level: 2, Text: "Section", Line: 12},
+		},
+	}, true)
+	assert.Nil(t, err)
+
+	assertHeadings(t, index, id, []core.Heading{
+		{Level: 1, Text: "Title", Line: 1},
+		{Level: 2, Text: "Section", Line: 12},
+	})
+
+	// A note without headings is not reported as having any.
+	emptyID, err := index.Add(core.Note{Path: "log/empty.md"}, true)
+	assert.Nil(t, err)
+	assertHeadings(t, index, emptyID, []core.Heading{})
+
+	_ = db
+}
+
+func TestNoteIndexUpdateWithHeadings(t *testing.T) {
+	_, index := testNoteIndex(t)
+
+	id, err := index.Add(core.Note{
+		Path:     "log/added.md",
+		Headings: []core.Heading{{Level: 1, Text: "Before", Line: 1}},
+	}, true)
+	assert.Nil(t, err)
+
+	// Updating replaces the headings instead of appending to them.
+	err = index.Update(core.Note{
+		Path:     "log/added.md",
+		Headings: []core.Heading{{Level: 2, Text: "After", Line: 4}},
+	})
+	assert.Nil(t, err)
+
+	assertHeadings(t, index, id, []core.Heading{{Level: 2, Text: "After", Line: 4}})
+}
+
+func assertHeadings(t *testing.T, index *NoteIndex, id core.NoteID, expected []core.Heading) {
+	headings, err := index.FindHeadingsOfNotes([]core.NoteID{id})
+	assert.Nil(t, err)
+
+	actual := headings[id]
+	if actual == nil {
+		actual = []core.Heading{}
+	}
+	assert.Equal(t, fmt.Sprintf("%v", actual), fmt.Sprintf("%v", expected))
+}

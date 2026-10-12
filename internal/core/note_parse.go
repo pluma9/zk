@@ -37,6 +37,18 @@ type NoteContent struct {
 	Links []Link
 	// Additional metadata. For example, extracted from a YAML frontmatter.
 	Metadata map[string]any
+	// Headings found in the note content, in document order.
+	Headings []Heading
+}
+
+// Heading is a Markdown heading found in a note.
+type Heading struct {
+	// Level of the heading, from 1 to 6.
+	Level int `json:"level"`
+	// Text content of the heading, without the leading markers.
+	Text string `json:"text"`
+	// 1-based line number of the heading in the note.
+	Line int `json:"line"`
 }
 
 // ParseNoteAt implements NoteParser.
@@ -70,6 +82,7 @@ func (n *Notebook) ParseNoteWithContent(absPath string, content []byte) (*Note, 
 		WordCount:  len(strings.Fields(contentStr)),
 		Links:      make([]Link, 0),
 		Tags:       contentParts.Tags,
+		Headings:   contentParts.Headings,
 		Metadata:   contentParts.Metadata,
 		Checksum:   fmt.Sprintf("%x", sha256.Sum256(content)),
 	}

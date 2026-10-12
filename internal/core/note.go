@@ -47,6 +47,8 @@ type Note struct {
 	Links []Link
 	// List of tags found in the content.
 	Tags []string
+	// List of headings found in the content, in document order.
+	Headings []Heading
 	// JSON dictionary of raw metadata extracted from the frontmatter.
 	Metadata map[string]any
 	// Date of creation.

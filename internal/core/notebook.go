@@ -238,6 +238,12 @@ func (n *Notebook) FindLinksBetweenNotes(ids []NoteID) ([]ResolvedLink, error) {
 	return n.index.FindLinksBetweenNotes(ids)
 }
 
+// FindHeadingsOfNotes retrieves the headings of the given notes, indexed by
+// note ID.
+func (n *Notebook) FindHeadingsOfNotes(ids []NoteID) (map[NoteID][]Heading, error) {
+	return n.index.FindHeadingsOfNotes(ids)
+}
+
 // FindCollections retrieves all the collections of the given kind.
 func (n *Notebook) FindCollections(kind CollectionKind, sorters []CollectionSorter) ([]Collection, error) {
 	return n.index.FindCollections(kind, sorters)
